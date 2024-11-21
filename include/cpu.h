@@ -4,6 +4,8 @@
 #include "macros.h"
 #include "global.h"
 
+#define INSTRUCTION_SET_SIZE 151
+
 typedef enum
 {
   ZPX,
@@ -103,9 +105,13 @@ typedef struct
 typedef struct
 {
   registers_t registers;
-  instruction_t instruction_set[151];
+  instruction_t instruction_set[INSTRUCTION_SET_SIZE];
 } cpu_t;
 
-static void init_instruction_set(cpu_t *cpu, const uint8_t op_code, const uint8_t instruction, const uint8_t address_mode, const uint8_t cycles);
+void cpu_init(cpu_t *cpu);
+
+instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
+
+static void init_instruction_set(cpu_t *cpu);
 
 #endif
