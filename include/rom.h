@@ -31,4 +31,6 @@ typedef struct
 
 void load_rom(const char *file, ines_t *rom_meta);
 
+static uint8_t *read_file(const char *file, uint64_t *file_size);
+
 #endif

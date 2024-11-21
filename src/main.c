@@ -10,7 +10,7 @@ int main()
     log("Starting hnes...");
 
     ines_t rom_meta;
-    load_rom("/home/hwilcox/hnes/mario.nes", &rom_meta);
+    load_rom("/home/hwilcox/Documents/hnes/mario.nes", &rom_meta);
 
     return 0;
 }

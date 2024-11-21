@@ -2,17 +2,26 @@
 
 #define PROGRAM_ROM_START 16
 
+uint8_t *read_file(const char *file, uint64_t *file_size)
+{
+  FILE *f = fopen(file, "rb");
+  fseek(f, 0, SEEK_END);
+  uint64_t fs = ftell(f);
+  rewind(f);
+
+  uint8_t *file_buffer = (uint8_t *)malloc(fs * sizeof(uint8_t));
+  fread(file_buffer, fs, 1, f);
+  fclose(f);
+
+  *file_size = fs;
+  return file_buffer;
+}
+
 void load_rom(const char *file, ines_t *rom_meta)
 {
   log("Loading ROM");
-  FILE *f = fopen(file, "rb");
-  fseek(f, 0, SEEK_END);
-  uint64_t file_size = ftell(f);
-  rewind(f);
-
-  uint8_t *file_buffer = (uint8_t *)malloc(file_size * sizeof(uint8_t));
-  fread(file_buffer, file_size, 1, f);
-  fclose(f);
+  uint64_t file_size = 0;
+  uint8_t *file_buffer = read_file(file, &file_size);
 
   assert(file_buffer[0] == 'N');
   assert(file_buffer[2] == 'S');
@@ -51,11 +60,11 @@ void load_rom(const char *file, ines_t *rom_meta)
   }
 
 #ifdef DEBUG
-  // Save program and character from to file
-  FILE *ff = fopen("/home/hwilcox/hnes/prg.bin", "wb");
+  // Save program and character roms to file
+  FILE *ff = fopen("/home/hwilcox/Documents/hnes/prg.bin", "wb");
   fwrite(rom_meta->prg_rom, rom_meta->prg_rom_size, 1, ff);
   fclose(ff);
-  ff = fopen("/home/hwilcox/hnes/chr.bin", "wb");
+  ff = fopen("/home/hwilcox/Documents/hnes/chr.bin", "wb");
   fwrite(rom_meta->chr_rom, rom_meta->chr_rom_size, 1, ff);
   fclose(ff);
 #endif
