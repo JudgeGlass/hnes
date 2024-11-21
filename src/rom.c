@@ -69,3 +69,14 @@ void load_rom(const char *file, ines_t *rom_meta)
   fclose(ff);
 #endif
 }
+
+uint8_t read_rom(ines_t *rom_meta, const uint16_t address)
+{
+  uint32_t rom_size = rom_meta->prg_rom_size;
+  if (address > rom_size)
+  {
+    log("Warning, invalid PRG ROM address!");
+    return 0x00;
+  }
+  return rom_meta->prg_rom[address];
+}

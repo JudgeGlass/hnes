@@ -4,7 +4,7 @@
 #include "macros.h"
 #include "global.h"
 
-#include "rom.h"
+#include "system.h"
 
 #define INSTRUCTION_SET_SIZE 151
 
@@ -111,7 +111,7 @@ typedef struct
 } cpu_t;
 
 void cpu_init(cpu_t *cpu);
-void cpu_loop(cpu_t *cpu, ines_t *rom);
+void cpu_loop(cpu_t *cpu);
 
 static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
 static uint8_t get_operand_count(address_mode_t address_mode);
