@@ -47,15 +47,31 @@ uint8_t get_operand_count(address_mode_t address_mode)
 
 void cpu_loop(cpu_t *cpu)
 {
+  // Get start from reset vector (0xFFFC)
   uint16_t reset_vector = read_address(cpu->registers.PC + 1);
   reset_vector = (reset_vector << 8) | read_address(cpu->registers.PC);
   cpu->registers.PC = reset_vector;
 
+  uint16_t operands = 0x0000;
+
   while (TRUE)
   {
+    operands = 0;
     uint8_t op_code = read_address(cpu->registers.PC);
     instruction_t *instruction = get_instruction_from_op(cpu->instruction_set, op_code);
     uint8_t operand_count = get_operand_count(instruction->address_mode);
+
+    if (operand_count == 2)
+    {
+      operands |= read_address(cpu->registers.PC + 1);
+    }
+
+    if (operand_count == 3)
+    {
+      operands |= read_address(cpu->registers.PC + 2);
+      operands = (operands << 8) | read_address(cpu->registers.PC + 1);
+    }
+
     cpu->registers.PC += operand_count;
   }
 }
