@@ -16,8 +16,5 @@ int main()
     cpu_t cpu;
     cpu_init(&cpu);
 
-    instruction_t *instruction = get_instruction_from_op(cpu.instruction_set, 0x69);
-    printf("OP: 0x%X\tINS: %d\tAM: %d\tCC: %d\n", instruction->op_code, instruction->instruction_type, instruction->address_mode, instruction->cycles);
-
     return 0;
 }

@@ -4,23 +4,25 @@
 #include "macros.h"
 #include "global.h"
 
+#include "rom.h"
+
 #define INSTRUCTION_SET_SIZE 151
 
 typedef enum
-{
-  ZPX,
-  ZPY,
-  ABSX,
-  ABSY,
-  INDX,
-  INDY,
-  IMP,
-  ACC,
-  IMM,
-  ZP,
-  ABS,
-  REL,
-  IND,
+{       // OP code + operand(s)
+  ZPX,  // 2 bytes
+  ZPY,  // 2 bytes
+  ABSX, // 3 bytes
+  ABSY, // 3 bytes
+  INDX, // 2 bytes
+  INDY, // 2 bytes
+  IMP,  // 1 byte
+  ACC,  // 1 byte
+  IMM,  // 2 bytes
+  ZP,   // 2 bytes
+  ABS,  // 3 bytes
+  REL,  // 2 bytes
+  IND,  // 3 bytes
 } address_mode_t;
 
 typedef enum
@@ -109,9 +111,10 @@ typedef struct
 } cpu_t;
 
 void cpu_init(cpu_t *cpu);
+void cpu_loop(cpu_t *cpu, ines_t *rom);
 
-instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
-
+static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
+static uint8_t get_operand_count(address_mode_t address_mode);
 static void init_instruction_set(cpu_t *cpu);
 
 #endif

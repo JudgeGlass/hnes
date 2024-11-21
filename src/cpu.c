@@ -3,6 +3,12 @@
 void cpu_init(cpu_t *cpu)
 {
   init_instruction_set(cpu);
+  cpu->registers.A = 0;
+  cpu->registers.X = 0;
+  cpu->registers.Y = 0;
+  cpu->registers.SP = 0xFD;
+  cpu->registers.P = 0;
+  cpu->registers.PC = 0x8000;
 }
 
 instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code)
@@ -13,6 +19,37 @@ instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uin
     {
       return &instruction_set[i];
     }
+  }
+}
+
+uint8_t get_operand_count(address_mode_t address_mode)
+{
+  switch (address_mode)
+  {
+  case IMP:
+  case ACC:
+    return 1;
+  case IMM:
+  case ZP:
+  case ZPX:
+  case ZPY:
+  case INDX:
+  case INDY:
+  case REL:
+    return 2;
+  case IND:
+  case ABS:
+  case ABSX:
+  case ABSY:
+    return 3;
+  }
+}
+
+void cpu_loop(cpu_t *cpu, ines_t *rom)
+{
+  const uint64_t program_size = rom->prg_rom_size;
+  while (TRUE)
+  {
   }
 }
 
