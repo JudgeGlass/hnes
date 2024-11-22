@@ -57,9 +57,10 @@ void cpu_loop(cpu_t *cpu)
   while (TRUE)
   {
     operands = 0;
+
     uint8_t op_code = read_address(cpu->registers.PC);
     instruction_t *instruction = get_instruction_from_op(cpu->instruction_set, op_code);
-    uint8_t operand_count = get_operand_count(instruction->address_mode);
+    uint8_t operand_count = get_operand_count(instruction->address_mode); // Includes the opcode in the count
 
     if (operand_count == 2)
     {
@@ -68,8 +69,8 @@ void cpu_loop(cpu_t *cpu)
 
     if (operand_count == 3)
     {
-      operands |= read_address(cpu->registers.PC + 2);
-      operands = (operands << 8) | read_address(cpu->registers.PC + 1);
+      operands |= read_address(cpu->registers.PC + 2);                  // Upper byte
+      operands = (operands << 8) | read_address(cpu->registers.PC + 1); // Lower byte
     }
 
     cpu->registers.PC += operand_count;
