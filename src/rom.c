@@ -61,10 +61,10 @@ void load_rom(const char *file, ines_t *rom_meta)
 
 #ifdef DEBUG
   // Save program and character roms to file
-  FILE *ff = fopen("/home/hwilcox/Documents/hnes/prg.bin", "wb");
+  FILE *ff = fopen("/home/hwilcox/hnes/prg.bin", "wb");
   fwrite(rom_meta->prg_rom, rom_meta->prg_rom_size, 1, ff);
   fclose(ff);
-  ff = fopen("/home/hwilcox/Documents/hnes/chr.bin", "wb");
+  ff = fopen("/home/hwilcox/hnes/chr.bin", "wb");
   fwrite(rom_meta->chr_rom, rom_meta->chr_rom_size, 1, ff);
   fclose(ff);
 #endif

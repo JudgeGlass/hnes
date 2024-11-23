@@ -8,6 +8,13 @@
 
 #define INSTRUCTION_SET_SIZE 151
 
+#define FLAG_NEGATIVE 0b10000000
+#define FLAG_OVERFLOW 0b01000000
+#define FLAG_DECIMAL 0b00001000
+#define FLAG_INTERRUPT 0b00000100
+#define FLAG_ZERO 0b00000010
+#define FLAG_CARRY 0b00000001
+
 typedef enum
 {       // OP code + operand(s)
   ZPX,  // 2 bytes
@@ -100,8 +107,9 @@ typedef struct
   uint8_t X;   // General purpose X
   uint8_t Y;   // General purpose Y
   uint16_t PC; // Program counter
-  uint32_t SP; // Stack pointer
+  uint16_t SP; // Stack pointer
   uint8_t P;   // Status (6 bits used for ALU)
+  uint8_t flags;
 } registers_t;
 
 typedef struct

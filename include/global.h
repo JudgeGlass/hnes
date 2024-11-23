@@ -13,6 +13,15 @@ typedef uint8_t bool;
 #define TRUE 1
 #define FALSE 0;
 
+#define BIT_1 0b00000001
+#define BIT_2 0b00000010
+#define BIT_3 0b00000100
+#define BIT_4 0b00001000
+#define BIT_5 0b00010000
+#define BIT_6 0b00100000
+#define BIT_7 0b01000000
+#define BIT_8 0b10000000
+
 #define SYSTEM_RAM_START 0x0000
 #define SYSTEM_RAM_END 0x07FF
 #define PPU_START 0x2000
@@ -27,5 +36,7 @@ typedef uint8_t bool;
 #define CART_RAM_END 0x7FFF
 #define CART_ROM_START 0x8000
 #define CART_ROM_END 0xFFFF
+
+#define STACK_START 0x0100
 
 #endif

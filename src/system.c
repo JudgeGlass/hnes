@@ -2,14 +2,17 @@
 
 void init_system()
 {
-  load_rom("/home/hwilcox/Documents/hnes/mario.nes", &g_rom);
+  load_rom("/home/hwilcox/hnes/mario.nes", &g_rom);
+
+  init_ram(&g_sys_ram);
+  init_cart_ram(&g_cart_ram);
 }
 
 uint8_t read_address(uint16_t address)
 {
   if (address >= SYSTEM_RAM_START && address <= SYSTEM_RAM_END)
   {
-    // Get ram
+    return g_sys_ram.buffer[address - SYSTEM_RAM_START];
   }
   else if (address >= PPU_START && address <= PPU_END)
   {
@@ -29,7 +32,7 @@ uint8_t read_address(uint16_t address)
   }
   else if (address >= CART_RAM_START && address <= CART_RAM_END)
   {
-    // Get CART RAM
+    return g_cart_ram.buffer[address - CART_RAM_START];
   }
   else if (address >= CART_ROM_START && address <= CART_ROM_END)
   {
@@ -43,7 +46,7 @@ void write_address(uint16_t address, uint8_t value)
 {
   if (address >= SYSTEM_RAM_START && address <= SYSTEM_RAM_END)
   {
-    // Get ram
+    g_sys_ram.buffer[address - SYSTEM_RAM_START] = value;
   }
   else if (address >= PPU_START && address <= PPU_END)
   {
@@ -63,10 +66,25 @@ void write_address(uint16_t address, uint8_t value)
   }
   else if (address >= CART_RAM_START && address <= CART_RAM_END)
   {
-    // Get CART RAM
+    g_cart_ram.buffer[address - CART_RAM_START] = value;
   }
   else if (address >= CART_ROM_START && address <= CART_ROM_END)
   {
-    //  Get CART ROM
   }
+}
+
+void push_stack(uint8_t value, uint16_t *sp)
+{
+  *sp--;
+  write_address(*sp, value);
+  if (*sp < STACK_START)
+  {
+    log("WARN: Stack pointer went below start address! (overflow)");
+  }
+}
+
+uint8_t pop_stack(uint16_t *sp)
+{
+  *sp++;
+  return read_address(*sp);
 }

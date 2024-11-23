@@ -17,4 +17,5 @@ add_executable(hnes
     src/rom.c
     src/cpu.c
     src/system.c
+    src/ram.c
 )
