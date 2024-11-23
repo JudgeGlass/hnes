@@ -125,4 +125,26 @@ static instruction_t *get_instruction_from_op(instruction_t *instruction_set, co
 static uint8_t get_operand_count(address_mode_t address_mode);
 static void init_instruction_set(cpu_t *cpu);
 
+static void adc(instruction_t *instruction, uint16_t operands);
+static void and (instruction_t * instruction, uint16_t operands);
+static void asl(instruction_t *instruction, uint16_t operands);
+static void bit(instruction_t *instruction, uint16_t operands);
+static void dec(instruction_t *instruction, uint16_t operands);
+static void eor(instruction_t *instruction, uint16_t operands);
+static void inc(instruction_t *instruction, uint16_t operands);
+static void jsr(instruction_t *instruction, uint16_t operands);
+static void lsh(instruction_t *instruction, uint16_t operands);
+static void ora(instruction_t *instruction, uint16_t operands);
+static void rol(instruction_t *instruction, uint16_t operands);
+static void ror(instruction_t *instruction, uint16_t operands);
+static void sbc(instruction_t *instruction, uint16_t operands);
+
+static void load(instruction_t *instruction, uint16_t operands);
+static void store(instruction_t *instruction, uint16_t operands);
+static void compare(instruction_t *instruction, uint16_t operands);
+static void branch(instruction_t *instruction, uint16_t operands);
+static void flags(instruction_t *instruction, uint16_t operands);
+static void stack(instruction_t *instruction, uint16_t operands);
+static void general(instruction_t *instruction, uint16_t operands);
+
 #endif
