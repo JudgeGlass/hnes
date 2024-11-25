@@ -77,6 +77,126 @@ void cpu_loop(cpu_t *cpu)
   }
 }
 
+// Start CPU instructions
+
+void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+  address_mode_t am = instruction->address_mode;
+  uint8_t value = 0;
+  if (am == IMM)
+  {
+    value = (uint8_t)(operands & 0x00FF);
+  }
+
+  if (am == ZP)
+  {
+    value = (uint8_t)read_address(operands & 0x00FF);
+  }
+
+  if (am == ABS)
+  {
+    value = read_address(operands);
+  }
+
+  if (am == ABSX)
+  {
+    value = read_address(operands + cpu->registers.X);
+  }
+
+  if (am == ABSY)
+  {
+    value = read_address(operands + cpu->registers.Y);
+  }
+
+  if (am = INDX)
+  {
+    uint8_t addr = (uint8_t)(operands & 0x00FF);
+    addr += cpu->registers.X;
+    if (addr > 0xFF)
+      addr = addr % 0xFF;
+  }
+
+  cpu->registers.A += value;
+}
+
+void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void lsh(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+}
+
+// End of CPU instructions
+
 void init_instruction_set(cpu_t *cpu)
 {
   cpu->instruction_set[0] = (const instruction_t){0x69, ADC, IMM, 2};
