@@ -385,9 +385,9 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.flags |= FLAG_BREAK;
     cpu->registers.flags |= FLAG_INTERRUPT;
-    push_stack(cpu->registers.flags, cpu->registers.SP);
-    push_stack((uint8_t)(cpu->registers.PC & 0x00FF), cpu->registers.SP);
-    push_stack((uint8_t)((cpu->registers.PC >> 8) & 0x00FF), cpu->registers.SP);
+    push_stack(cpu->registers.flags, &cpu->registers.SP);
+    push_stack((uint8_t)(cpu->registers.PC & 0x00FF), &cpu->registers.SP);
+    push_stack((uint8_t)((cpu->registers.PC >> 8) & 0x00FF), &cpu->registers.SP);
 
     uint8_t irq_vec_low = read_address(0xFFFE);
     uint8_t irq_vec_high = read_address(0xFFFF);
