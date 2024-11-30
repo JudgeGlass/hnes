@@ -77,58 +77,221 @@ void cpu_loop(cpu_t *cpu)
   }
 }
 
-// Start CPU instructions
-
-void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands)
 {
   address_mode_t am = instruction->address_mode;
-  uint8_t value = 0;
+  if (am == ACC)
+  {
+    return cpu->registers.A;
+  }
+
   if (am == IMM)
   {
-    value = (uint8_t)(operands & 0x00FF);
+    return (uint8_t)(operands & 0x00FF);
   }
 
   if (am == ZP)
   {
-    value = (uint8_t)read_address(operands & 0x00FF);
+    return (uint8_t)read_address(operands & 0x00FF);
   }
 
   if (am == ABS)
   {
-    value = read_address(operands);
+    return read_address(operands);
   }
 
   if (am == ABSX)
   {
-    value = read_address(operands + cpu->registers.X);
+    return read_address(operands + cpu->registers.X);
   }
 
   if (am == ABSY)
   {
-    value = read_address(operands + cpu->registers.Y);
+    return read_address(operands + cpu->registers.Y);
   }
 
-  if (am = INDX)
+  if (am == INDX)
   {
     uint8_t addr = (uint8_t)(operands & 0x00FF);
     addr += cpu->registers.X;
-    if (addr > 0xFF)
-      addr = addr % 0xFF;
+    uint16_t lower_pointer = read_address(addr);
+    uint16_t high_pointer = read_address(addr + 1);
+    uint16_t final_address = (high_pointer << 8) | lower_pointer;
+
+    return read_address(final_address);
   }
 
-  cpu->registers.A += value;
+  if (am == INDY)
+  {
+    uint8_t addr = (uint8_t)(operands & 0x00FF);
+    uint16_t pointer_low = read_address(addr);
+    uint16_t pointer_high = read_address(addr + 1);
+    uint16_t base_address = (pointer_high << 8) | pointer_low;
+
+    uint16_t final_address = base_address + cpu->registers.Y;
+    return read_address(final_address);
+  }
+}
+
+void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value)
+{
+  address_mode_t am = instruction->address_mode;
+  uint8_t value = 0;
+
+  if (am == ACC)
+  {
+    cpu->registers.A = value;
+  }
+
+  if (am == IMM)
+  {
+    write_address((uint8_t)(operands & 0x00FF), value);
+  }
+
+  if (am == ZP)
+  {
+    write_address((uint8_t)(operands & 0x00FF), value);
+  }
+
+  if (am == ABS)
+  {
+    write_address(operands, value);
+  }
+
+  if (am == ABSX)
+  {
+    write_address(operands + cpu->registers.X, value);
+  }
+
+  if (am == ABSY)
+  {
+    write_address(operands + cpu->registers.Y, value);
+  }
+
+  if (am == INDX)
+  {
+    uint8_t addr = (uint8_t)(operands & 0x00FF);
+    addr += cpu->registers.X;
+    uint16_t lower_pointer = read_address(addr);
+    uint16_t high_pointer = read_address(addr + 1);
+    uint16_t final_address = (high_pointer << 8) | lower_pointer;
+
+    write_address(final_address, value);
+  }
+
+  if (am == INDY)
+  {
+    uint8_t addr = (uint8_t)(operands & 0x00FF);
+    uint16_t pointer_low = read_address(addr);
+    uint16_t pointer_high = read_address(addr + 1);
+    uint16_t base_address = (pointer_high << 8) | pointer_low;
+
+    uint16_t final_address = base_address + cpu->registers.Y;
+    write_address(final_address, value);
+  }
+}
+
+void set_flags(cpu_t *cpu, uint8_t operands, uint8_t result)
+{
+}
+
+// Start CPU instructions
+
+void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+{
+  uint8_t operands = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A + operands + (cpu->registers.flags & FLAG_CARRY ? 1 : 0);
+
+  if (result == 0)
+  {
+    cpu->registers.flags |= FLAG_ZERO;
+  }
+
+  if (result & 0x80 != 0)
+  {
+    cpu->registers.flags |= FLAG_NEGATIVE;
+  }
+
+  if (result < cpu->registers.A)
+  {
+    cpu->registers.flags |= FLAG_CARRY;
+  }
+
+  bool signA = (cpu->registers.A & 0x80) != 0;
+  bool signOperands = (operands & 0x80) != 0;
+  bool signResult = (result & 0x80) != 0;
+
+  if ((signA == signOperands) && (signA != signResult))
+  {
+    cpu->registers.flags |= FLAG_OVERFLOW;
+  }
+
+  cpu->registers.A += result;
 }
 
 void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
 {
+  uint8_t operands = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A & operands;
+
+  if (result == 0)
+  {
+    cpu->registers.flags |= FLAG_ZERO;
+  }
+
+  if (result & 0x80 != 0)
+  {
+    cpu->registers.flags |= FLAG_NEGATIVE;
+  }
+
+  cpu->registers.A = result;
 }
 
 void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
+  uint8_t operands = read_address_mode(cpu, instruction, operands);
+
+  bool isA = (instruction->instruction_type == ACC);
+
+  uint8_t result = (isA ? (operands >> 1) : (cpu->registers.A >> 1));
+
+  if (result == 0 && isA)
+  {
+    cpu->registers.flags |= FLAG_ZERO;
+  }
+
+  if (result & 0x80 != 0)
+  {
+    cpu->registers.flags |= FLAG_NEGATIVE;
+  }
+
+  if (operands & BIT_7 == 0x1)
+  {
+    cpu->registers.flags |= FLAG_CARRY;
+  }
+
+  write_address_mode(cpu, instruction, operands, result);
 }
 
 void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
+  uint8_t operands = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A & operands;
+
+  if (operands & BIT_6 == 0x20)
+  {
+    cpu->registers.flags |= FLAG_OVERFLOW;
+  }
+
+  if (operands & BIT_7 == 0x40)
+  {
+    cpu->registers.flags |= FLAG_NEGATIVE;
+  }
+
+  if (result == 0)
+  {
+    cpu->registers.flags |= FLAG_ZERO;
+  }
 }
 
 void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
@@ -181,6 +344,31 @@ void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 
 void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
+  instruction_type_t b = instruction->instruction_type;
+  if (b == BCC && cpu->registers.flags & FLAG_CARRY != 0x1)
+  {
+    cpu->registers.PC = operands;
+  }
+  else if (b == BCS && cpu->registers.flags & FLAG_CARRY == 0x1)
+  {
+    cpu->registers.PC = operands;
+  }
+  else if (b == BEQ && cpu->registers.flags & FLAG_ZERO == 0x2)
+  {
+    cpu->registers.PC = operands;
+  }
+  else if (b == BMI && cpu->registers.flags & FLAG_NEGATIVE == 0x80)
+  {
+    cpu->registers.PC = operands;
+  }
+  else if (b == BNE && cpu->registers.flags & FLAG_ZERO != 0x2)
+  {
+    cpu->registers.PC = operands;
+  }
+  else if (b == BPL && cpu->registers.flags & FLAG_NEGATIVE != 0x80)
+  {
+    cpu->registers.PC = operands;
+  }
 }
 
 void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
@@ -193,6 +381,19 @@ void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 
 void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
+  instruction_type_t b = instruction->instruction_type;
+  if (b == BRK)
+  {
+    cpu->registers.flags |= FLAG_BREAK;
+    cpu->registers.flags |= FLAG_INTERRUPT;
+    push_stack(cpu->registers.flags, cpu->registers.SP);
+    push_stack((uint8_t)(cpu->registers.PC & 0x00FF), cpu->registers.SP);
+    push_stack((uint8_t)((cpu->registers.PC >> 8) & 0x00FF), cpu->registers.SP);
+
+    uint8_t irq_vec_low = read_address(0xFFFE);
+    uint8_t irq_vec_high = read_address(0xFFFF);
+    cpu->registers.PC = (irq_vec_high << 8) | irq_vec_low;
+  }
 }
 
 // End of CPU instructions

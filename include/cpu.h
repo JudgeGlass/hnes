@@ -10,6 +10,7 @@
 
 #define FLAG_NEGATIVE 0b10000000
 #define FLAG_OVERFLOW 0b01000000
+#define FLAG_BREAK 0b00100000
 #define FLAG_DECIMAL 0b00001000
 #define FLAG_INTERRUPT 0b00000100
 #define FLAG_ZERO 0b00000010
@@ -123,7 +124,10 @@ void cpu_loop(cpu_t *cpu);
 
 static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
 static uint8_t get_operand_count(address_mode_t address_mode);
+static uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
+static void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value);
 static void init_instruction_set(cpu_t *cpu);
+static void set_flags(cpu_t *cpu, uint8_t operands, uint8_t result);
 
 static void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu);
