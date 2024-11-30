@@ -136,7 +136,6 @@ uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t opera
 void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value)
 {
   address_mode_t am = instruction->address_mode;
-  uint8_t value = 0;
 
   if (am == ACC)
   {
@@ -199,8 +198,8 @@ void set_flags(cpu_t *cpu, uint8_t operands, uint8_t result)
 
 void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
-  uint8_t operands = read_address_mode(cpu, instruction, operands);
-  uint8_t result = cpu->registers.A + operands + (cpu->registers.flags & FLAG_CARRY ? 1 : 0);
+  uint8_t value = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A + value + (cpu->registers.flags & FLAG_CARRY ? 1 : 0);
 
   if (result == 0)
   {
@@ -218,7 +217,7 @@ void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 
   bool signA = (cpu->registers.A & 0x80) != 0;
-  bool signOperands = (operands & 0x80) != 0;
+  bool signOperands = (value & 0x80) != 0;
   bool signResult = (result & 0x80) != 0;
 
   if ((signA == signOperands) && (signA != signResult))
@@ -231,8 +230,8 @@ void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 
 void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
 {
-  uint8_t operands = read_address_mode(cpu, instruction, operands);
-  uint8_t result = cpu->registers.A & operands;
+  uint8_t value = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A & value;
 
   if (result == 0)
   {
@@ -249,11 +248,11 @@ void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
 
 void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
-  uint8_t operands = read_address_mode(cpu, instruction, operands);
+  uint8_t value = read_address_mode(cpu, instruction, operands);
 
   bool isA = (instruction->instruction_type == ACC);
 
-  uint8_t result = (isA ? (operands >> 1) : (cpu->registers.A >> 1));
+  uint8_t result = (isA ? (value >> 1) : (cpu->registers.A >> 1));
 
   if (result == 0 && isA)
   {
@@ -265,7 +264,7 @@ void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
 
-  if (operands & BIT_7 == 0x1)
+  if (value & BIT_7 == 0x1)
   {
     cpu->registers.flags |= FLAG_CARRY;
   }
@@ -275,15 +274,15 @@ void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 
 void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
-  uint8_t operands = read_address_mode(cpu, instruction, operands);
-  uint8_t result = cpu->registers.A & operands;
+  uint8_t value = read_address_mode(cpu, instruction, operands);
+  uint8_t result = cpu->registers.A & value;
 
-  if (operands & BIT_6 == 0x20)
+  if (value & BIT_6 == 0x20)
   {
     cpu->registers.flags |= FLAG_OVERFLOW;
   }
 
-  if (operands & BIT_7 == 0x40)
+  if (value & BIT_7 == 0x40)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
