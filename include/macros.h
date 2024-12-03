@@ -3,7 +3,7 @@
 
 #include "global.h"
 
-#define log(string) \
-  printf("%s - LINE: %d FILE: %s\n", string, __LINE__, __FILE__);
+#define DEBUG(string) \
+  printf("DEBUG: %s\t - LINE: %d FILE: %s\n", string, __LINE__, __FILE__);
 
 #endif

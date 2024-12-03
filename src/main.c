@@ -7,8 +7,8 @@
 
 int main()
 {
-    log("hnes - Copyright (c) 2024 Hunter Wilcox");
-    log("Starting hnes...");
+    printf("hnes - Copyright (c) 2024 Hunter Wilcox\n");
+    printf("Starting hnes...\n");
 
     init_system();
 

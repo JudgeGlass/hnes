@@ -77,7 +77,7 @@ void push_stack(uint8_t value, uint8_t *sp)
 {
   if ((*sp) + 0x100 <= STACK_START)
   {
-    log("WARN: Stack pointer went at or below start address! (overflow)");
+    DEBUG("WARN: Stack pointer went at or below start address! (overflow)");
   }
   write_address((*sp) + 0x100, value);
   (*sp)--;

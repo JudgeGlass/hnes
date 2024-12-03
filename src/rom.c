@@ -5,6 +5,11 @@
 uint8_t *read_file(const char *file, uint64_t *file_size)
 {
   FILE *f = fopen(file, "rb");
+  if (f == NULL)
+  {
+    printf("Fatal error: Could not open %s\n", file);
+    exit(-1);
+  }
   fseek(f, 0, SEEK_END);
   uint64_t fs = ftell(f);
   rewind(f);
@@ -19,7 +24,7 @@ uint8_t *read_file(const char *file, uint64_t *file_size)
 
 void load_rom(const char *file, ines_t *rom_meta)
 {
-  log("Loading ROM");
+  DEBUG("Loading ROM");
   uint64_t file_size = 0;
   uint8_t *file_buffer = read_file(file, &file_size);
 
@@ -66,7 +71,7 @@ void load_rom(const char *file, ines_t *rom_meta)
   rom_meta->prg_rom_size = 1024 * 32;
   //
 
-#ifdef DEBUG
+#ifdef IS_DEBUG
   // Save program and character roms to file
   FILE *ff = fopen("/home/hwilcox/hnes/prg.bin", "wb");
   fwrite(rom_meta->prg_rom, rom_meta->prg_rom_size, 1, ff);
@@ -82,7 +87,7 @@ uint8_t read_rom(ines_t *rom_meta, const uint16_t address)
   uint32_t rom_size = rom_meta->prg_rom_size;
   if (address > rom_size)
   {
-    log("Warning, invalid PRG ROM address!");
+    DEBUG("Warning, invalid PRG ROM address!");
     return 0x00;
   }
   return rom_meta->prg_rom[address];

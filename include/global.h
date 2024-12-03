@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define DEBUG
+#define IS_DEBUG
 
 typedef uint8_t bool;
 
