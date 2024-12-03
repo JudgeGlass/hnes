@@ -109,7 +109,6 @@ typedef struct
   uint8_t Y;   // General purpose Y
   uint16_t PC; // Program counter
   uint8_t SP;  // Stack pointer
-  uint8_t P;   // Status (6 bits used for ALU)
   uint8_t flags;
 } registers_t;
 

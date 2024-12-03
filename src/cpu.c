@@ -9,7 +9,6 @@ void cpu_init(cpu_t *cpu)
   cpu->registers.X = 0;
   cpu->registers.Y = 0;
   cpu->registers.SP = 0xFD;
-  cpu->registers.P = 0;
   cpu->registers.PC = 0xFFFC;
   cpu->registers.flags = 0;
 }
