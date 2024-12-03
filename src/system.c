@@ -73,18 +73,18 @@ void write_address(uint16_t address, uint8_t value)
   }
 }
 
-void push_stack(uint8_t value, uint16_t *sp)
+void push_stack(uint8_t value, uint8_t *sp)
 {
   *sp--;
-  write_address(*sp, value);
+  write_address(*sp + 0x100, value);
   if (*sp < STACK_START)
   {
     log("WARN: Stack pointer went below start address! (overflow)");
   }
 }
 
-uint8_t pop_stack(uint16_t *sp)
+uint8_t pop_stack(uint8_t *sp)
 {
   *sp++;
-  return read_address(*sp);
+  return read_address(*sp + 0x100);
 }

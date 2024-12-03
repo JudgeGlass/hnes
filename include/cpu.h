@@ -108,7 +108,7 @@ typedef struct
   uint8_t X;   // General purpose X
   uint8_t Y;   // General purpose Y
   uint16_t PC; // Program counter
-  uint16_t SP; // Stack pointer
+  uint8_t SP;  // Stack pointer
   uint8_t P;   // Status (6 bits used for ALU)
   uint8_t flags;
 } registers_t;
@@ -121,6 +121,7 @@ typedef struct
 
 void cpu_init(cpu_t *cpu);
 void cpu_loop(cpu_t *cpu);
+static void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
 
 static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
 static uint8_t get_operand_count(address_mode_t address_mode);
@@ -137,12 +138,12 @@ static void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
-static void lsh(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 
+static void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
