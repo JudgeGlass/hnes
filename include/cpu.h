@@ -128,7 +128,7 @@ static uint8_t get_operand_count(address_mode_t address_mode);
 static uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
 static void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value);
 static void init_instruction_set(cpu_t *cpu);
-static void set_flags(cpu_t *cpu, uint8_t operands, uint8_t result);
+static void set_flag(cpu_t *cpu, bool should_set, uint8_t flag);
 
 static void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu);
