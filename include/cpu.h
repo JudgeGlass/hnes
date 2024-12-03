@@ -57,7 +57,6 @@ typedef enum
   STA,
   STX,
   STY,
-
   BPL, // Branch inst.
   BMI,
   BVC,
@@ -94,6 +93,14 @@ typedef enum
   NOP,
 } instruction_type_t;
 
+const static char *g_instruction_names[] = {
+    "ADC", "AND", "ASL", "BIT", "CMP", "CPX", "CPY", "DEC", "EOR", "INC",
+    "JSR", "LDA", "LDX", "LDY", "LSR", "ORA", "ROL", "ROR", "SBC", "STA",
+    "STX", "STY", "BPL", "BMI", "BVC", "BVS", "BCC", "BCS", "BNE", "BEQ",
+    "JMP", "CLC", "SEC", "CLI", "SEI", "CLV", "CLD", "SED", "TAX", "TXA",
+    "DEX", "INX", "TAY", "TYA", "DEY", "INY", "TXS", "TSX", "PHA", "PLA",
+    "PHP", "PLP", "BRK", "RTI", "RTS", "NOP"};
+
 typedef struct
 {
   uint8_t op_code;
@@ -120,7 +127,6 @@ typedef struct
 
 void cpu_init(cpu_t *cpu);
 void cpu_loop(cpu_t *cpu);
-static void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
 
 static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
 static uint8_t get_operand_count(address_mode_t address_mode);
@@ -128,6 +134,7 @@ static uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_
 static void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value);
 static void init_instruction_set(cpu_t *cpu);
 static void set_flag(cpu_t *cpu, bool should_set, uint8_t flag);
+static void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
 
 static void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
 static void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu);
