@@ -59,6 +59,13 @@ void load_rom(const char *file, ines_t *rom_meta)
     rom_meta->chr_rom[i - prg_rom_start - rom_meta->prg_rom_size] = file_buffer[i];
   }
 
+  // TEST REMOVE LATER
+  uint64_t fs = 0;
+  uint8_t *fb = read_file("/home/hwilcox/hnes/EEPROM.bin", &fs);
+  rom_meta->prg_rom = fb;
+  rom_meta->prg_rom_size = 1024 * 32;
+  //
+
 #ifdef DEBUG
   // Save program and character roms to file
   FILE *ff = fopen("/home/hwilcox/hnes/prg.bin", "wb");

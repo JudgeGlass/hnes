@@ -1,5 +1,7 @@
 #include "cpu.h"
 
+static bool g_skip_address_cycle = FALSE;
+
 void cpu_init(cpu_t *cpu)
 {
   init_instruction_set(cpu);
@@ -9,6 +11,7 @@ void cpu_init(cpu_t *cpu)
   cpu->registers.SP = 0xFD;
   cpu->registers.P = 0;
   cpu->registers.PC = 0xFFFC;
+  cpu->registers.flags = 0;
 }
 
 instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code)
@@ -57,6 +60,7 @@ void cpu_loop(cpu_t *cpu)
   while (TRUE)
   {
     operands = 0;
+    g_skip_address_cycle = FALSE;
 
     uint8_t op_code = read_address(cpu->registers.PC);
     instruction_t *instruction = get_instruction_from_op(cpu->instruction_set, op_code);
@@ -73,7 +77,118 @@ void cpu_loop(cpu_t *cpu)
       operands = (operands << 8) | read_address(cpu->registers.PC + 1); // Lower byte
     }
 
-    cpu->registers.PC += operand_count;
+    printf("CPU: A: %d  X: %d  Y: %d  FLAGS: 0x%x  SP: 0x%x  PC: 0x%x\n", cpu->registers.A, cpu->registers.X, cpu->registers.Y, cpu->registers.flags, cpu->registers.SP, cpu->registers.PC);
+    exec(cpu, instruction, operands);
+
+    cpu->registers.PC += ((g_skip_address_cycle) ? 0 : operand_count);
+  }
+}
+
+void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands)
+{
+  instruction_type_t b = instruction->instruction_type;
+  switch (b)
+  {
+  case ADC:
+    adc(instruction, operands, cpu);
+    break;
+  case AND:
+    and(instruction, operands, cpu);
+    break;
+  case ASL:
+    asl(instruction, operands, cpu);
+    break;
+  case BIT:
+    bit(instruction, operands, cpu);
+    break;
+  case CMP:
+  case CPX:
+  case CPY:
+    compare(instruction, operands, cpu);
+    break;
+  case DEC:
+    dec(instruction, operands, cpu);
+    break;
+  case EOR:
+    eor(instruction, operands, cpu);
+    break;
+  case INC:
+  case INX:
+  case INY:
+    inc(instruction, operands, cpu);
+    break;
+  case JSR:
+    jsr(instruction, operands, cpu);
+    break;
+  case LDA:
+  case LDX:
+  case LDY:
+    load(instruction, operands, cpu);
+    break;
+  case LSR:
+    shift(instruction, operands, cpu);
+    break;
+  case ORA:
+    ora(instruction, operands, cpu);
+    break;
+  case ROL:
+    rol(instruction, operands, cpu);
+    break;
+  case ROR:
+    ror(instruction, operands, cpu);
+    break;
+  case SBC:
+    sbc(instruction, operands, cpu);
+    break;
+  case STA:
+  case STX:
+  case STY:
+    store(instruction, operands, cpu);
+    break;
+  case BPL: // Branch inst.
+  case BMI:
+  case BVC:
+  case BVS:
+  case BCC:
+  case BCS:
+  case BNE:
+  case BEQ:
+    branch(instruction, operands, cpu);
+    break;
+  case JMP:
+  case CLC: // Flag inst.
+  case CLI:
+  case CLV:
+  case CLD:
+  case TAX: // Register inst.
+  case TXA:
+  case TAY:
+  case TYA:
+  case TXS: // Stack inst.
+  case TSX:
+  case RTI:
+  case RTS:
+  case BRK: // General inst.
+    general(instruction, operands, cpu);
+    break;
+  case SEC:
+  case SEI:
+  case SED:
+    flags(instruction, operands, cpu);
+    break;
+
+  case DEX:
+  case DEY:
+    dec(instruction, operands, cpu);
+    break;
+  case PHA:
+  case PLA:
+  case PHP:
+  case PLP:
+    stack(instruction, operands, cpu);
+    break;
+  case NOP:
+    break;
   }
 }
 
@@ -206,7 +321,7 @@ void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (result & 0x80 != 0)
+  if (result & 0x40 != 0)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -216,9 +331,9 @@ void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_CARRY;
   }
 
-  bool signA = (cpu->registers.A & 0x80) != 0;
-  bool signOperands = (value & 0x80) != 0;
-  bool signResult = (result & 0x80) != 0;
+  bool signA = (cpu->registers.A & 0x40) != 0;
+  bool signOperands = (value & 0x40) != 0;
+  bool signResult = (result & 0x40) != 0;
 
   if ((signA == signOperands) && (signA != signResult))
   {
@@ -238,7 +353,7 @@ void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (result & 0x80 != 0)
+  if (result & 0x40 != 0)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -259,7 +374,7 @@ void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (result & 0x80 != 0)
+  if (result & 0x40 != 0)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -282,7 +397,7 @@ void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_OVERFLOW;
   }
 
-  if (value & BIT_7 == 0x40)
+  if (value & BIT_7 == 0x20)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -305,7 +420,7 @@ void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((value - 1) & BIT_7 == 0x40)
+    if ((value - 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -318,7 +433,7 @@ void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.X - 1) & BIT_7 == 0x40)
+    if ((cpu->registers.X - 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -332,7 +447,7 @@ void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.Y - 1) & BIT_7 == 0x40)
+    if ((cpu->registers.Y - 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -351,7 +466,7 @@ void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (result & 0x80 != 0)
+  if (result & 0x40 != 0)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -371,7 +486,7 @@ void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((value + 1) & BIT_7 == 0x40)
+    if ((value + 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -384,7 +499,7 @@ void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.X + 1) & BIT_7 == 0x40)
+    if ((cpu->registers.X + 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -398,7 +513,7 @@ void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.Y + 1) & BIT_7 == 0x40)
+    if ((cpu->registers.Y + 1) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -415,6 +530,7 @@ void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     push_stack((uint8_t)(cpu->registers.PC & 0x00FF), &cpu->registers.SP);
     push_stack((uint8_t)((cpu->registers.PC >> 8) & 0x00FF), &cpu->registers.SP);
     cpu->registers.PC = operands;
+    g_skip_address_cycle = TRUE;
   }
 }
 
@@ -467,7 +583,7 @@ void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (cpu->registers.A & BIT_7 == 0x40)
+  if (cpu->registers.A & BIT_7 == 0x20)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -480,7 +596,7 @@ void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     if (instruction->instruction_type == ACC)
     {
-      if (cpu->registers.A & BIT_7 == 0x80)
+      if (cpu->registers.A & BIT_7 == 0x40)
       {
         cpu->registers.flags |= FLAG_CARRY;
       }
@@ -491,7 +607,7 @@ void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
         cpu->registers.flags |= FLAG_ZERO;
       }
 
-      if (cpu->registers.A & BIT_7 == 0x40)
+      if (cpu->registers.A & BIT_7 == 0x20)
       {
         cpu->registers.flags |= FLAG_NEGATIVE;
       }
@@ -499,7 +615,7 @@ void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     else
     {
       uint8_t result = read_address_mode(cpu, instruction, operands);
-      if (result & BIT_7 == 0x80)
+      if (result & BIT_7 == 0x40)
       {
         cpu->registers.flags |= FLAG_CARRY;
       }
@@ -510,7 +626,7 @@ void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
         cpu->registers.flags |= FLAG_ZERO;
       }
 
-      if (result & BIT_7 == 0x40)
+      if (result & BIT_7 == 0x20)
       {
         cpu->registers.flags |= FLAG_NEGATIVE;
       }
@@ -538,7 +654,7 @@ void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
         cpu->registers.flags |= FLAG_ZERO;
       }
 
-      if (cpu->registers.A & BIT_7 == 0x40)
+      if (cpu->registers.A & BIT_7 == 0x20)
       {
         cpu->registers.flags |= FLAG_NEGATIVE;
       }
@@ -557,7 +673,7 @@ void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
         cpu->registers.flags |= FLAG_ZERO;
       }
 
-      if (result & BIT_7 == 0x40)
+      if (result & BIT_7 == 0x20)
       {
         cpu->registers.flags |= FLAG_NEGATIVE;
       }
@@ -577,7 +693,7 @@ void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_ZERO;
   }
 
-  if (result & 0x80 != 0)
+  if (result & 0x40 != 0)
   {
     cpu->registers.flags |= FLAG_NEGATIVE;
   }
@@ -587,9 +703,9 @@ void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     cpu->registers.flags |= FLAG_CARRY;
   }
 
-  bool signA = (cpu->registers.A & 0x80) != 0;
-  bool signOperands = (value & 0x80) != 0;
-  bool signResult = (result & 0x80) != 0;
+  bool signA = (cpu->registers.A & 0x40) != 0;
+  bool signOperands = (value & 0x40) != 0;
+  bool signResult = (result & 0x40) != 0;
 
   if ((signA == signOperands) && (signA != signResult))
   {
@@ -611,7 +727,7 @@ void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.A) & BIT_7 == 0x40)
+    if ((cpu->registers.A) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -624,7 +740,7 @@ void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.X) & BIT_7 == 0x40)
+    if ((cpu->registers.X) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -637,7 +753,7 @@ void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
       cpu->registers.flags |= FLAG_ZERO;
     }
 
-    if ((cpu->registers.Y) & BIT_7 == 0x40)
+    if ((cpu->registers.Y) & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -718,7 +834,7 @@ void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BMI && cpu->registers.flags & FLAG_NEGATIVE == 0x80)
+  else if (b == BMI && cpu->registers.flags & FLAG_NEGATIVE == 0x40)
   {
     cpu->registers.PC = operands;
   }
@@ -726,15 +842,15 @@ void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BPL && cpu->registers.flags & FLAG_NEGATIVE != 0x80)
+  else if (b == BPL && cpu->registers.flags & FLAG_NEGATIVE != 0x40)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BVC && cpu->registers.flags & FLAG_OVERFLOW != 0x40)
+  else if (b == BVC && cpu->registers.flags & FLAG_OVERFLOW != 0x20)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BVS && cpu->registers.flags & FLAG_OVERFLOW == 0x40)
+  else if (b == BVS && cpu->registers.flags & FLAG_OVERFLOW == 0x20)
   {
     cpu->registers.PC = operands;
   }
@@ -775,7 +891,7 @@ void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.A & BIT_7 == 0x40)
+    if (cpu->registers.A & BIT_7 == 0x20)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -819,7 +935,8 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
   else if (b == JMP)
   {
-    cpu->registers.PC = read_address_mode(cpu, instruction, operands);
+    cpu->registers.PC = operands;
+    g_skip_address_cycle = TRUE;
   }
   else if (b == RTI)
   {
@@ -828,7 +945,10 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
   else if (b == RTS)
   {
-    cpu->registers.PC = pop_stack(&cpu->registers.SP) - 1;
+    uint8_t pc1 = pop_stack(&cpu->registers.SP);
+    uint8_t pc2 = pop_stack(&cpu->registers.SP);
+    cpu->registers.PC = ((pc1 << 8) | pc2) + 3;
+    g_skip_address_cycle = TRUE;
   }
   else if (b == TAX)
   {
@@ -837,7 +957,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.X & FLAG_NEGATIVE == 0x80)
+    if (cpu->registers.X & FLAG_NEGATIVE == 0x40)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -849,7 +969,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.Y & FLAG_NEGATIVE == 0x80)
+    if (cpu->registers.Y & FLAG_NEGATIVE == 0x40)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -861,7 +981,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.X & FLAG_NEGATIVE == 0x80)
+    if (cpu->registers.X & FLAG_NEGATIVE == 0x40)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -873,7 +993,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.A & FLAG_NEGATIVE == 0x80)
+    if (cpu->registers.A & FLAG_NEGATIVE == 0x40)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
@@ -885,7 +1005,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     {
       cpu->registers.flags |= FLAG_ZERO;
     }
-    if (cpu->registers.A & FLAG_NEGATIVE == 0x80)
+    if (cpu->registers.A & FLAG_NEGATIVE == 0x40)
     {
       cpu->registers.flags |= FLAG_NEGATIVE;
     }
