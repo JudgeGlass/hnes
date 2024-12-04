@@ -18,4 +18,5 @@ add_executable(hnes
     src/cpu.c
     src/system.c
     src/ram.c
+    src/ppu.c
 )

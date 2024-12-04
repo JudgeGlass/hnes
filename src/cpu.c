@@ -76,7 +76,7 @@ void cpu_loop(cpu_t *cpu)
       operands = (operands << 8) | read_address(cpu->registers.PC + 1); // Lower byte
     }
 
-    printf("CPU: A: %d  X: %d  Y: %d  FLAGS: 0x%x  SP: 0x%x  PC: 0x%x  INST: %s  OPERANDS: 0x%x\n", cpu->registers.A,
+    printf("CPU: A: 0x%X  X: 0x%X  Y: 0x%X  FLAGS: 0x%X  SP: 0x%X  PC: 0x%X  INST: %s  OPERANDS: 0x%X\n", cpu->registers.A,
            cpu->registers.X, cpu->registers.Y, cpu->registers.flags, cpu->registers.SP, cpu->registers.PC, g_instruction_names[instruction->instruction_type], operands);
     exec(cpu, instruction, operands);
 
