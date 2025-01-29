@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <time.h>
 
 #define IS_DEBUG
 
@@ -21,6 +22,8 @@ typedef uint8_t bool;
 #define BIT_6 0b00100000
 #define BIT_7 0b01000000
 #define BIT_8 0b10000000
+
+#define CPU_CYCLE_TIME 5.587 * (10 ^ (-4))
 
 #define SYSTEM_RAM_START 0x0000
 #define SYSTEM_RAM_END 0x07FF

@@ -123,6 +123,7 @@ typedef struct
 {
   registers_t registers;
   instruction_t instruction_set[INSTRUCTION_SET_SIZE];
+  size_t total_cpu_cycles;
 } cpu_t;
 
 void cpu_init(cpu_t *cpu);

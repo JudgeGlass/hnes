@@ -80,7 +80,10 @@ void cpu_loop(cpu_t *cpu)
            cpu->registers.X, cpu->registers.Y, cpu->registers.flags, cpu->registers.SP, cpu->registers.PC, g_instruction_names[instruction->instruction_type], operands);
     exec(cpu, instruction, operands);
 
+    DELAY(CPU_CYCLE_TIME * instruction->cycles);
+
     cpu->registers.PC += ((g_skip_address_cycle) ? 0 : operand_count);
+    cpu->total_cpu_cycles += instruction->cycles;
   }
 }
 
