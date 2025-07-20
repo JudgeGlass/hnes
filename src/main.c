@@ -1,3 +1,4 @@
+#ifndef TEST
 #include <stdio.h>
 
 #include "macros.h"
@@ -18,3 +19,4 @@ int main()
 
     return 0;
 }
+#endif

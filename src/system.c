@@ -1,8 +1,14 @@
 #include "system.h"
 
+static ines_t g_rom;
+static sys_ram_t g_sys_ram;
+static cart_ram_t g_cart_ram;
+
 void init_system()
 {
+#ifndef TEST
   load_rom("/home/hwilcox/hnes/mario.nes", &g_rom);
+#endif
 
   init_ram(&g_sys_ram);
   init_cart_ram(&g_cart_ram);

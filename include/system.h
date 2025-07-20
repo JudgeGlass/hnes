@@ -7,10 +7,6 @@
 #include "rom.h"
 #include "ram.h"
 
-static ines_t g_rom;
-static sys_ram_t g_sys_ram;
-static cart_ram_t g_cart_ram;
-
 uint8_t read_address(uint16_t address);
 uint8_t pop_stack(uint8_t *sp);
 

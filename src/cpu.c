@@ -1,5 +1,35 @@
 #include "cpu.h"
 
+static instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uint8_t op_code);
+static uint8_t get_operand_count(address_mode_t address_mode);
+static uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
+static void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value);
+static void init_instruction_set(cpu_t *cpu);
+static void set_flag(cpu_t *cpu, bool should_set, uint8_t flag);
+static void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands);
+
+static void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void and(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+
+static void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+static void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu);
+
 static bool g_skip_address_cycle = FALSE;
 
 void cpu_init(cpu_t *cpu)
@@ -22,6 +52,8 @@ instruction_t *get_instruction_from_op(instruction_t *instruction_set, const uin
       return &instruction_set[i];
     }
   }
+
+  return NULL;
 }
 
 uint8_t get_operand_count(address_mode_t address_mode)
@@ -45,6 +77,8 @@ uint8_t get_operand_count(address_mode_t address_mode)
   case ABSY:
     return 3;
   }
+
+  return 0;
 }
 
 void cpu_loop(cpu_t *cpu)
@@ -87,7 +121,7 @@ void cpu_loop(cpu_t *cpu)
   }
 }
 
-void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands)
+static void exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands)
 {
   instruction_type_t b = instruction->instruction_type;
   switch (b)
@@ -249,9 +283,12 @@ uint8_t read_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t opera
     uint16_t final_address = base_address + cpu->registers.Y;
     return read_address(final_address);
   }
+
+  DEBUG("WARN: INVALID ADDRESS MODE");
+  return 0;
 }
 
-void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value)
+static void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operands, uint8_t value)
 {
   address_mode_t am = instruction->address_mode;
 
@@ -308,7 +345,7 @@ void write_address_mode(cpu_t *cpu, instruction_t *instruction, uint16_t operand
   }
 }
 
-void set_flag(cpu_t *cpu, bool should_set, uint8_t flag)
+static void set_flag(cpu_t *cpu, bool should_set, uint8_t flag)
 {
   if (should_set)
   {
@@ -335,13 +372,13 @@ void set_flag(cpu_t *cpu, bool should_set, uint8_t flag)
 
 // Start CPU instructions
 
-void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
   uint8_t result = cpu->registers.A + value + (cpu->registers.flags & FLAG_CARRY ? 1 : 0);
 
   set_flag(cpu, result == 0, FLAG_ZERO);
-  set_flag(cpu, result & 0x40 != 0, FLAG_NEGATIVE);
+  set_flag(cpu, (result & 0x80) != 0, FLAG_NEGATIVE);
   set_flag(cpu, result < cpu->registers.A, FLAG_CARRY);
 
   bool signA = (cpu->registers.A & 0x40) != 0;
@@ -353,110 +390,110 @@ void adc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   cpu->registers.A = result;
 }
 
-void and (instruction_t * instruction, uint16_t operands, cpu_t *cpu)
+static void and(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
   uint8_t result = cpu->registers.A & value;
 
   set_flag(cpu, result == 0, FLAG_ZERO);
-  set_flag(cpu, result & 0x40 != 0, FLAG_NEGATIVE);
+  set_flag(cpu, (result & 0x80) != 0, FLAG_NEGATIVE);
 
   cpu->registers.A = result;
 }
 
-void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void asl(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
 
-  bool isA = (instruction->instruction_type == ACC);
+  bool isA = (instruction->address_mode == ACC);
 
   uint8_t result = (isA ? (value >> 1) : (cpu->registers.A >> 1));
 
   set_flag(cpu, result == 0 && isA, FLAG_ZERO);
-  set_flag(cpu, result & 0x40 != 0, FLAG_NEGATIVE);
-  set_flag(cpu, value & BIT_7 == 0x1, FLAG_CARRY);
+  set_flag(cpu, (result & 0x80) != 0, FLAG_NEGATIVE);
+  set_flag(cpu, (value & BIT_8) == 0x80, FLAG_CARRY);
 
   write_address_mode(cpu, instruction, operands, result);
 }
 
-void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void bit(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
   uint8_t result = cpu->registers.A & value;
 
-  set_flag(cpu, value & BIT_6 == 0x20, FLAG_OVERFLOW);
-  set_flag(cpu, value & BIT_7 == 0x20, FLAG_NEGATIVE);
+  set_flag(cpu, (value & BIT_7) == 0x40, FLAG_OVERFLOW);
+  set_flag(cpu, (value & BIT_8) == 0x80, FLAG_NEGATIVE);
   set_flag(cpu, result == 0, FLAG_ZERO);
 }
 
-void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void dec(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
 
   if (b == DEC)
   {
     uint8_t value = read_address_mode(cpu, instruction, operands);
-    set_flag(cpu, value - 1 == 0, FLAG_ZERO);
-    set_flag(cpu, ((value - 1) & BIT_7) == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (value - 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((value - 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     write_address_mode(cpu, instruction, operands, value - 1);
   }
   else if (b == DEX)
   {
-    set_flag(cpu, cpu->registers.X - 1 == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.X - 1) & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.X - 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((cpu->registers.X - 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     cpu->registers.X--;
   }
   else if (b == DEY)
   {
-    set_flag(cpu, cpu->registers.Y - 1 == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.Y - 1) & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.Y - 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((cpu->registers.Y - 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     cpu->registers.Y--;
   }
 }
 
-void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void eor(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
   uint8_t result = cpu->registers.A ^ value;
 
   set_flag(cpu, result == 0, FLAG_ZERO);
-  set_flag(cpu, result & 0x40 != 0, FLAG_NEGATIVE);
+  set_flag(cpu, (result & 0x80) != 0, FLAG_NEGATIVE);
 
   cpu->registers.A = result;
 }
 
-void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void inc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
 
   if (b == INC)
   {
     uint8_t value = read_address_mode(cpu, instruction, operands);
-    set_flag(cpu, value + 1 == 0, FLAG_ZERO);
-    set_flag(cpu, (value + 1) & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (value + 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((value + 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     write_address_mode(cpu, instruction, operands, value + 1);
   }
   else if (b == INX)
   {
-    set_flag(cpu, cpu->registers.X + 1 == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.X + 1) & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.X + 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((cpu->registers.X + 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     cpu->registers.X++;
   }
   else if (b == INY)
   {
-    set_flag(cpu, cpu->registers.Y + 1 == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.Y + 1) & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.Y + 1) == 0, FLAG_ZERO);
+    set_flag(cpu, ((cpu->registers.Y + 1) & BIT_8) == 0x80, FLAG_NEGATIVE);
 
     cpu->registers.Y++;
   }
 }
 
-void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == JSR)
@@ -468,14 +505,14 @@ void jsr(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 }
 
-void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == LSR)
   {
-    if (instruction->instruction_type == ACC)
+    if (instruction->address_mode == ACC)
     {
-      set_flag(cpu, cpu->registers.A & BIT_1 == 0x1, FLAG_CARRY);
+      set_flag(cpu, (cpu->registers.A & BIT_1) == 0x1, FLAG_CARRY);
 
       cpu->registers.A >>= 1;
       set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
@@ -483,7 +520,7 @@ void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
     else
     {
       uint8_t result = read_address_mode(cpu, instruction, operands);
-      set_flag(cpu, result & BIT_1 == 0x1, FLAG_CARRY);
+      set_flag(cpu, (result & BIT_1) == 0x1, FLAG_CARRY);
 
       result >>= 1;
       set_flag(cpu, result == 0, FLAG_ZERO);
@@ -493,78 +530,77 @@ void shift(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 }
 
-void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void ora(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
-  instruction_type_t b = instruction->instruction_type;
   uint8_t result = read_address_mode(cpu, instruction, operands);
 
   cpu->registers.A |= result;
 
   set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-  set_flag(cpu, cpu->registers.A & BIT_7 == 0x20, FLAG_NEGATIVE);
+  set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_NEGATIVE);
 }
 
-void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == ROL)
   {
-    if (instruction->instruction_type == ACC)
+    if (instruction->address_mode == ACC)
     {
-      set_flag(cpu, cpu->registers.A & BIT_7 == 0x40, FLAG_CARRY);
+      set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_CARRY);
 
       cpu->registers.A <<= 1;
       set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-      set_flag(cpu, cpu->registers.A & BIT_7 == 0x20, FLAG_NEGATIVE);
+      set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_NEGATIVE);
     }
     else
     {
       uint8_t result = read_address_mode(cpu, instruction, operands);
-      set_flag(cpu, result & BIT_7 == 0x40, FLAG_CARRY);
+      set_flag(cpu, (result & BIT_8) == 0x80, FLAG_CARRY);
 
       result <<= 1;
       set_flag(cpu, result == 0, FLAG_ZERO);
-      set_flag(cpu, result & BIT_7 == 0x20, FLAG_NEGATIVE);
+      set_flag(cpu, (result & BIT_8) == 0x80, FLAG_NEGATIVE);
 
       write_address_mode(cpu, instruction, operands, result);
     }
   }
 }
 
-void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == ROR)
   {
-    if (instruction->instruction_type == ACC)
+    if (instruction->address_mode == ACC)
     {
-      set_flag(cpu, cpu->registers.A & BIT_1 == 0x1, FLAG_CARRY);
+      set_flag(cpu, (cpu->registers.A & BIT_1) == 0x1, FLAG_CARRY);
 
       cpu->registers.A >>= 1;
       set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-      set_flag(cpu, cpu->registers.A & BIT_7 == 0x20, FLAG_NEGATIVE);
+      set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_NEGATIVE);
     }
     else
     {
       uint8_t result = read_address_mode(cpu, instruction, operands);
-      set_flag(cpu, result & BIT_1 == 0x1, FLAG_CARRY);
+      set_flag(cpu, (result & BIT_1) == 0x1, FLAG_CARRY);
 
       result >>= 1;
       set_flag(cpu, result == 0, FLAG_ZERO);
-      set_flag(cpu, result & BIT_7 == 0x20, FLAG_NEGATIVE);
+      set_flag(cpu, (result & BIT_8) == 0x80, FLAG_NEGATIVE);
 
       write_address_mode(cpu, instruction, operands, result);
     }
   }
 }
 
-void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   uint8_t value = read_address_mode(cpu, instruction, operands);
-  uint8_t result = cpu->registers.A - value - (1 - cpu->registers.flags & FLAG_CARRY ? 1 : 0);
+  uint8_t result = cpu->registers.A - value - (1 - (cpu->registers.flags & FLAG_CARRY) ? 1 : 0);
 
   set_flag(cpu, result == 0, FLAG_ZERO);
-  set_flag(cpu, result & BIT_7 != 0, FLAG_NEGATIVE);
+  set_flag(cpu, (result & BIT_8) != 0, FLAG_NEGATIVE);
   set_flag(cpu, result < cpu->registers.A, FLAG_CARRY);
 
   bool signA = (cpu->registers.A & 0x40) != 0;
@@ -576,7 +612,7 @@ void sbc(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   cpu->registers.A = result;
 }
 
-void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   uint8_t result = read_address_mode(cpu, instruction, operands);
@@ -584,23 +620,23 @@ void load(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.A = result;
     set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.A & BIT_7) == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == LDX)
   {
     cpu->registers.X = result;
     set_flag(cpu, cpu->registers.X == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.X & BIT_7) == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.X & BIT_8) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == LDY)
   {
     cpu->registers.Y = result;
     set_flag(cpu, cpu->registers.Y == 0, FLAG_ZERO);
-    set_flag(cpu, (cpu->registers.Y & BIT_7) == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.Y & BIT_8) == 0x80, FLAG_NEGATIVE);
   }
 }
 
-void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == STA)
@@ -617,65 +653,65 @@ void store(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 }
 
-void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void compare(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   uint8_t value = read_address_mode(cpu, instruction, operands);
   if (b == CMP)
   {
-    set_flag(cpu, cpu->registers.A - value == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.A - value >= 0, FLAG_CARRY);
+    set_flag(cpu, (cpu->registers.A - value) == 0, FLAG_ZERO);
+    set_flag(cpu, (cpu->registers.A - value) >= 0, FLAG_CARRY);
   }
   else if (b == CPX)
   {
-    set_flag(cpu, cpu->registers.X - value == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.X - value >= 0, FLAG_CARRY);
+    set_flag(cpu, (cpu->registers.X - value) == 0, FLAG_ZERO);
+    set_flag(cpu, (cpu->registers.X - value) >= 0, FLAG_CARRY);
   }
   else if (b == CPY)
   {
-    set_flag(cpu, cpu->registers.Y - value == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.Y - value >= 0, FLAG_CARRY);
+    set_flag(cpu, (cpu->registers.Y - value) == 0, FLAG_ZERO);
+    set_flag(cpu, (cpu->registers.Y - value) >= 0, FLAG_CARRY);
   }
 }
 
-void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void branch(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
-  if (b == BCC && cpu->registers.flags & FLAG_CARRY != 0x1)
+  if (b == BCC && (cpu->registers.flags & FLAG_CARRY) != 0x1)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BCS && cpu->registers.flags & FLAG_CARRY == 0x1)
+  else if (b == BCS && (cpu->registers.flags & FLAG_CARRY) == 0x1)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BEQ && cpu->registers.flags & FLAG_ZERO == 0x2)
+  else if (b == BEQ && (cpu->registers.flags & FLAG_ZERO) == 0x2)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BMI && cpu->registers.flags & FLAG_NEGATIVE == 0x40)
+  else if (b == BMI && (cpu->registers.flags & FLAG_NEGATIVE) == 0x80)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BNE && cpu->registers.flags & FLAG_ZERO != 0x2)
+  else if (b == BNE && (cpu->registers.flags & FLAG_ZERO) != 0x2)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BPL && cpu->registers.flags & FLAG_NEGATIVE != 0x40)
+  else if (b == BPL && (cpu->registers.flags & FLAG_NEGATIVE) != 0x80)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BVC && cpu->registers.flags & FLAG_OVERFLOW != 0x20)
+  else if (b == BVC && (cpu->registers.flags & FLAG_OVERFLOW) != 0x40)
   {
     cpu->registers.PC = operands;
   }
-  else if (b == BVS && cpu->registers.flags & FLAG_OVERFLOW == 0x20)
+  else if (b == BVS && (cpu->registers.flags & FLAG_OVERFLOW) == 0x40)
   {
     cpu->registers.PC = operands;
   }
 }
 
-void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == SEC)
@@ -692,7 +728,7 @@ void flags(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 }
 
-void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == PHA)
@@ -707,7 +743,7 @@ void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.A = pop_stack(&cpu->registers.SP);
     set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.A & BIT_7 == 0x20, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.A & BIT_8) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == PLP)
   {
@@ -715,7 +751,7 @@ void stack(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   }
 }
 
-void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
+static void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
   if (b == BRK)
@@ -767,31 +803,31 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
   {
     cpu->registers.X = cpu->registers.A;
     set_flag(cpu, cpu->registers.X == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.X & FLAG_NEGATIVE == 0x40, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.X & FLAG_NEGATIVE) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == TAY)
   {
     cpu->registers.Y = cpu->registers.A;
     set_flag(cpu, cpu->registers.Y == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.Y & FLAG_NEGATIVE == 0x40, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.Y & FLAG_NEGATIVE) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == TSX)
   {
     cpu->registers.X = cpu->registers.SP;
     set_flag(cpu, cpu->registers.X == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.X & FLAG_NEGATIVE == 0x40, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.X & FLAG_NEGATIVE) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == TXA)
   {
     cpu->registers.A = cpu->registers.X;
     set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.A & FLAG_NEGATIVE == 0x40, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.A & FLAG_NEGATIVE) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == TYA)
   {
     cpu->registers.A = cpu->registers.Y;
     set_flag(cpu, cpu->registers.A == 0, FLAG_ZERO);
-    set_flag(cpu, cpu->registers.A & FLAG_NEGATIVE == 0x40, FLAG_NEGATIVE);
+    set_flag(cpu, (cpu->registers.A & FLAG_NEGATIVE) == 0x80, FLAG_NEGATIVE);
   }
   else if (b == TXS)
   {
@@ -801,7 +837,7 @@ void general(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 
 // End of CPU instructions
 
-void init_instruction_set(cpu_t *cpu)
+static void init_instruction_set(cpu_t *cpu)
 {
   cpu->instruction_set[0] = (const instruction_t){0x69, ADC, IMM, 2};
   cpu->instruction_set[1] = (const instruction_t){0x65, ADC, ZP, 3};
@@ -954,4 +990,9 @@ void init_instruction_set(cpu_t *cpu)
   cpu->instruction_set[148] = (const instruction_t){0x84, STY, ZP, 3};
   cpu->instruction_set[149] = (const instruction_t){0x94, STY, ZPX, 4};
   cpu->instruction_set[150] = (const instruction_t){0x8c, STY, ABS, 4};
+}
+
+void t_exec(cpu_t *cpu, instruction_t *instruction, uint16_t operands)
+{
+  exec(cpu, instruction, operands);
 }

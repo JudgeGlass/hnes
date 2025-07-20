@@ -2,6 +2,8 @@
 
 #define PROGRAM_ROM_START 16
 
+static uint8_t *read_file(const char *file, uint64_t *file_size);
+
 uint8_t *read_file(const char *file, uint64_t *file_size)
 {
   FILE *f = fopen(file, "rb");

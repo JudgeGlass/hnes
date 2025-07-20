@@ -2,3 +2,4 @@ build/
 .vscode/
 mario.nes
 *.bin
+test/test
