@@ -534,7 +534,7 @@ void rol(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 void ror(instruction_t *instruction, uint16_t operands, cpu_t *cpu)
 {
   instruction_type_t b = instruction->instruction_type;
-  if (b == ROL)
+  if (b == ROR)
   {
     if (instruction->instruction_type == ACC)
     {
